@@ -1,15 +1,17 @@
 # main.py
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
+from typing import Optional
 
 app = FastAPI()
 
-tasks = [
-    {"id": 1, "title": "Buy milk", "done": "true "},
-    {"id": 2, "title": "Walk the dog", "done": "true"},
-    {"id": 3, "title": "Finish assignment", "done": "false"}
+DEFAULT_TASKS = [
+    {"id": 1, "title": "Buy milk", "done": True},
+    {"id": 2, "title": "Walk the dog", "done": True},
+    {"id": 3, "title": "Finish assignment", "done": False}
 ]
 
+tasks = [t.copy() for t in DEFAULT_TASKS]
 class TaskCreate(BaseModel):
     title: str
 
@@ -29,9 +31,37 @@ def read_root():
 def health_check():
     return {"status": "ok"}
 
-@app.get("/tasks", summary="Get all tasks")
-def get_tasks():
-    return tasks
+@app.get("/stats", summary="Get task statistics")
+def get_stats():
+    total = len(tasks)
+    done_count = sum(1 for t in tasks if t['done'])
+    return{
+        "total_tasks": total,
+        "done": done_count,
+        "open": total - done_count
+    }
+
+@app.post("/reset", summary="reset tasks back to three examples")
+def reset_tasks():
+    global tasks
+    tasks = [t.copy() for t in DEFAULT_TASKS]
+    return {"message": "Tasks reset to default examples"}
+
+
+@app.get("/tasks", summary="list search with optional filtering and search")
+def get_tasks(done: Optional[bool]= None, search: Optional[str]=None):
+    result = tasks
+
+    if done is not None:
+        result = [t for t in result if t["done"]==done]
+    
+    if search is not None:
+        result = [t for t in result if search.lower() in t["title"].lower()]
+
+    return result
+
+
+
 
 @app.get("/tasks/{task_id}", summary="Get a single task by ID")
 def get_task(task_id: int):
@@ -53,13 +83,13 @@ def create_task(task: TaskCreate):
 
 @app.put("/tasks/{task_id}", summary="Update an existing task")
 def update_task(task_id: int, update: TaskUpdate):
-    if not update.title and update.title.strip():
+    if not update.title or not update.title.strip():
         raise HTTPException(status_code=400, detail="Title is required")
     
     for task in tasks:
         if task["id"] == task_id:
-            task["title"] == update.title
-            task["done"] == update.done
+            task["title"] = update.title
+            task["done"] = update.done
             return task
         
     raise HTTPException(status_code=404, detail=f"Task {task_id} not found")
