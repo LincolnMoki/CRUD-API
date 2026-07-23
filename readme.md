@@ -98,4 +98,4 @@ SELECT * FROM tasks WHERE done = 1;
 This returned only the completed tasks — the same data `GET /tasks?done=true` returns through the API, since both read from the same file.
 
 **Screenshot:**
-![DB Browser screenshot](./images/db.png.png)
+![DB Browser screenshot](./images/db.png)
