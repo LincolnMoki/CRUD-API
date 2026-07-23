@@ -73,6 +73,29 @@ content-type: application/json
 
 ![Swagger UI screenshot](./images/swagger_ui.png)
 
-## Notes
+## Database
 
-Data is stored in a Python list in memory, so it does not persist — restarting the server resets it back to the 3 example tasks.
+This project stores tasks in a **SQLite** database (`tasks.db`) instead of an in-memory list.
+
+**Why SQLite?**
+- It's a single file — no separate database server to install or run.
+- Zero setup: opening the file creates it if it doesn't exist.
+- Perfect for small projects and learning — the data now survives a server restart.
+
+**Where it lives:**
+The database file `tasks.db` is created automatically the first time you run the app. It's git-ignored, so each fresh clone starts with a clean database, reseeded with the 3 example tasks.
+
+**Run it:**
+```bash
+uvicorn main:app --reload
+```
+No extra setup — `tasks.db` and the `tasks` table are created automatically on first run.
+
+**Example SQL query (run by hand in DB Browser):**
+```sql
+SELECT * FROM tasks WHERE done = 1;
+```
+This returned only the completed tasks — the same data `GET /tasks?done=true` returns through the API, since both read from the same file.
+
+**Screenshot:**
+![DB Browser screenshot](./images/db.png.png)
