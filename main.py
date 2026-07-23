@@ -2,7 +2,9 @@
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 from typing import Optional
+from database import init_db
 
+init_db()
 app = FastAPI()
 
 DEFAULT_TASKS = [
