@@ -7,6 +7,15 @@ from database import init_db, get_connection
 init_db()
 app = FastAPI()
 
+tasks = []
+
+class TaskCreate(BaseModel):
+    title: str
+
+class TaskUpdate(BaseModel):
+    title: str | None = None
+    done: bool | None = None
+
 def row_to_dict(row):
     return {
         "id": row["id"],
@@ -40,7 +49,7 @@ def get_stats():
 @app.post("/reset", summary="reset tasks back to three examples")
 def reset_tasks():
     global tasks
-    tasks = [t.copy() for t in DEFAULT_TASKS]
+    tasks = []
     return {"message": "Tasks reset to default examples"}
 
 
@@ -63,6 +72,7 @@ def get_task(task_id: int):
     cursor.execute("SELECT * FROM tasks WHERE id = ?", (task_id,))
     row = cursor.fetchone()
     conn.close()
+
     if row is None:
         raise HTTPException(
             status_code=404,
@@ -76,10 +86,18 @@ def create_task(task: TaskCreate):
     if not task.title or not task.title.strip():
         raise HTTPException(status_code=400,detail="Task title is required")
     
-    new_id = max((t["id"] for t in tasks), default=0) + 1
-    new_task = {"id": new_id, "title":task.title,"done":False}
-    tasks.append(new_task)
-    return new_task
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute(
+        "INSERT INTO tasks (title, done) VALUES (?, ?)",
+        (task.title, 0)
+    )
+    new_id = cursor.lastrowid
+    conn.commit()
+    conn.close()
+
+    return {"id": new_id, "title": task.title, "done": False}
+
 
 @app.put("/tasks/{task_id}", summary="Update an existing task")
 def update_task(task_id: int, update: TaskUpdate):
